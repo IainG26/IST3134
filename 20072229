@@ -1,0 +1,59 @@
+https://www.kaggle.com/datasets/wilmerarltstrmberg/recipe-dataset-over-2m?resource=download
+
+# mapper.py
+
+
+
+import sys
+
+for line in sys.stdin:
+    line = line.strip()
+    fields = line.split('\t')
+    if len(fields) >= 8:  # Make sure the line has all required fields
+        website = fields[7]  # The website domain is the 8th field
+        print(f'{website}\t1')
+
+#reducer.py
+        import sys
+
+current_url = None
+current_count = 0
+
+for line in sys.stdin:
+    line = line.strip()
+    url, count = line.split('\t')
+    count = int(count)
+
+    if current_url == url:
+        current_count += count
+    else:
+        if current_url:
+            print(f'{current_url}\t{current_count}')
+        current_url = url
+        current_count = count
+
+if current_url == url:
+    print(f'{current_url}\t{current_count}')
+
+
+
+from pyspark import SparkContext
+
+sc = SparkContext("local", "URL Count")
+
+# Read the data from the file
+data = sc.recipe_analysis("/python/recipeanalysis/")
+
+# Split the lines and map each URL to a tuple (url, 1)
+urls = data.flatMap(lambda line: line.split("\n")).map(lambda url: (url, 1))
+
+# Reduce by key to sum the counts
+url_counts = urls.reduceByKey(lambda a, b: a + b)
+
+# Collect the results
+results = url_counts.collect()
+
+# Print the results
+for result in results:
+    print(result)
+
